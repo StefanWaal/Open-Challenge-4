@@ -1,0 +1,118 @@
+import math
+
+def createStartingConnections(rows, columns):
+    '''
+    Inputs: the amount of rows and columns the grid has
+    Output: a dictionary with a key for every square. The associated value is a list with all of the squares the square is connected to
+    The entrance is 0, the square after that 1, etc.
+    '''
+    totalSquares = rows * columns
+    startingConnections = {}
+
+    # Fill the dictionary startingConnections with a key for every square and a list with the squares it's connected to
+    for square in range(totalSquares):
+        startingConnections[square] = []
+        # Add the square above as a connection 
+        if square >= columns:
+            startingConnections[square].append(square - columns)
+        # Add the square on the left as a connection 
+        if square % columns != 0:
+            startingConnections[square].append(square - 1)
+        # Add the square on the right as a connection 
+        if (square + 1) % columns != 0:
+            startingConnections[square].append(square + 1)
+        # Add the square below as a connection 
+        if square < totalSquares - columns:
+            startingConnections[square].append(square + columns)
+    return startingConnections
+
+# The variables that control how many rows and columns the grid has
+
+def calculateClosedSquares(currentChain, connections):
+    '''
+    Inputs: the chain to investigate and the dictionary with the connections
+    Output: all of the squares that must be closed
+    '''
+    
+    closedSquares = ()
+    for chainPiece in currentChain:
+        for connection in connections[chainPiece]:
+            if connection not in currentChain and connection not in closedSquares:
+                closedSquares += (connection, )
+    return closedSquares
+
+def printChain(rows, columns, currentChain, closedSquares):
+    '''
+    Input: the amount of rows and columns in the grid, the current chain to print, and the forced closed squares
+    Result: a printed version of the grid plus how many invalid mazes of the type exist
+    '''
+    # Set up the grid with *
+    grid = []
+    for row in range(rows):
+        grid.append(["*"] * columns)
+    
+    # Replace all the segments of the chain with a .
+    for chainPiece in currentChain:
+        rowID = chainPiece // columns
+        colID = chainPiece % columns
+        grid[rowID][colID] = "."
+    
+    # Replace all the closed squares with an X
+    for wallPiece in closedSquares:
+        rowID = wallPiece // columns
+        colID = wallPiece % columns
+        grid[rowID][colID] = "X"
+    
+    # Add the entrance and the exit as an O
+    grid[0][0] = "O"
+    grid[rows-1][columns-1] = "O"
+    
+    # Print the grid
+    for row in grid:
+        # The line below (with an extra *) is a different formatting that doesn't seem to work on all computers
+        # print(*['{:<2}'.format(x) for x in row])
+        print(['{:<2}'.format(x) for x in row])
+    
+    # Print the amount of mazes of the current type
+    amountVariableSquares = rows * columns - len(currentChain) - len(closedSquares) - 1
+    amountInvalidMazes = math.floor(math.pow(2, amountVariableSquares))
+    if amountInvalidMazes == 1:
+        print("There is 1 maze of this type")
+    else:
+        print("There are " + str(amountInvalidMazes) + " maze of this type")
+    print("----------------------")
+
+rows = 3
+columns = 3
+totalSquares = rows * columns
+
+connections = createStartingConnections(rows, columns)
+
+# chainsToGo is a list with all of the chains that aren't yet explored
+chainsToGo = [(0,)]
+# chainsDict is a dictionary with all possible chains as keys. The values are all squares the chain is not allowed to extend to
+chainsDict = {(0,): (0, totalSquares-1-columns, totalSquares-2, totalSquares-1)}
+
+# Figure out all of the chains that start at the entrance and don't reach the exit
+while len(chainsToGo) > 0:
+    currentChain = chainsToGo.pop()
+    illegalKeys = chainsDict[currentChain]
+    for chainPiece in currentChain:
+        for connection in connections[chainPiece]:
+            if connection not in illegalKeys:
+                newChain = currentChain + (connection, )
+                chainsDict[newChain] = illegalKeys + (connection, )
+                chainsToGo.append(newChain)
+                illegalKeys += (connection,)
+
+totalInvalidMazes = 0
+# Calculate how many mazes have a specific chain and print the chains
+for currentChain in chainsDict:
+    closedSquares = calculateClosedSquares(currentChain, connections)
+    amountVariableSquares = totalSquares - len(currentChain) - len(closedSquares) - 1
+    totalInvalidMazes += math.pow(2, amountVariableSquares)
+    printChain(rows, columns, currentChain, closedSquares)
+    
+print("There are a total of " + str(math.floor(totalInvalidMazes)) + " invalid mazes of size " + str(rows) + "x" + str(columns))
+totalValidMazes = pow(2, totalSquares-2) - totalInvalidMazes
+print("There are a total of " + str(math.floor(totalValidMazes)) + " valid mazes of size " + str(rows) + "x" + str(columns))
